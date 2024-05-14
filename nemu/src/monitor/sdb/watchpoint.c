@@ -14,18 +14,9 @@
 ***************************************************************************************/
 
 #include "sdb.h"
+#include "watchpoint.h"
 
-#define NR_WP 32
-
-typedef struct watchpoint {
-  int NO;
-  struct watchpoint *next;
-
-  /* TODO: Add more members if necessary */
-
-} WP;
-
-static WP wp_pool[NR_WP] = {};
+WP wp_pool[NR_WP] = {};
 static WP *head = NULL, *free_ = NULL;
 
 void init_wp_pool() {
@@ -33,10 +24,43 @@ void init_wp_pool() {
   for (i = 0; i < NR_WP; i ++) {
     wp_pool[i].NO = i;
     wp_pool[i].next = (i == NR_WP - 1 ? NULL : &wp_pool[i + 1]);
+    wp_pool[i].unuse = true;
   }
 
   head = NULL;
   free_ = wp_pool;
+}
+
+WP* new_wp(){
+  for(WP* p = free_ ; p -> next != NULL ; p = p -> next){
+    if( p -> unuse == false){
+        p -> unuse = true;
+        if(head == NULL){    
+          head = p;
+        }
+        return p;
+    }
+    }
+    assert("No unuse point.\n");
+    return NULL;
+}
+
+void free_wp(WP *wp){
+  if(head -> NO == wp -> NO){
+    head -> unuse = false;
+	head = NULL;
+	printf("Delete watchpoint success.\n");
+	return ;
+    }
+    for(WP* p = head ; p -> next != NULL ; p = p -> next){
+	if(p -> next -> NO  == wp -> NO)
+	  {
+	    p -> next = p -> next -> next;
+	    p -> next -> unuse = false; // 没有被使用
+	    printf("free success.\n");
+	  }
+  }
+
 }
 
 /* TODO: Implement the functionality of watchpoint */

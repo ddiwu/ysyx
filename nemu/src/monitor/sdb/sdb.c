@@ -18,11 +18,32 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "sdb.h"
+#include "memory/paddr.h"
+#include "watchpoint.h"
 
 static int is_batch_mode = false;
 
 void init_regex();
 void init_wp_pool();
+
+void sdb_watchpoint_display(){
+  bool flag = true;
+  for(int i = 0 ; i < NR_WP ; i ++){
+	if(wp_pool[i].unuse){
+	    printf("Watchpoint.No: %d, expr = \"%s\", old_value = %d, new_value = %d\n", 
+		    wp_pool[i].NO, wp_pool[i].expr,wp_pool[i].old_value, wp_pool[i].new_value);
+		flag = false;
+	}
+  }
+  if(flag) printf("No watchpoint now.\n");
+}
+
+void delete_watchpoint(int no){
+  for(int i = 0 ; i < NR_WP ; i ++)
+	if(wp_pool[i].NO == no){
+	    free_wp(&wp_pool[i]);
+	}
+}
 
 /* We use the `readline' library to provide more flexibility to read from stdin. */
 static char* rl_gets() {
@@ -49,10 +70,102 @@ static int cmd_c(char *args) {
 
 
 static int cmd_q(char *args) {
+  nemu_state.state = NEMU_QUIT;
   return -1;
 }
 
 static int cmd_help(char *args);
+
+static int cmd_si(char *args) {
+  int n = 1;
+  if (args != NULL) {
+    sscanf(args, "%d", &n);
+  }
+  else {
+    n = 1;
+  }
+  cpu_exec(n);
+  return 0;
+}
+
+static int cmd_info(char *args) {
+  if (args == NULL) {
+    printf("Please input the subcommand of info\n");
+  }
+  else if (strcmp(args, "r") == 0){
+    isa_reg_display();
+  }
+  else if (strcmp(args, "w") == 0) {
+    sdb_watchpoint_display();
+  }
+  else {
+    printf("Unknown subcommand '%s'\n", args);
+  }
+  return 0;
+}
+
+static int cmd_x(char *args) {
+  int len;
+  paddr_t addr;
+  bool success;
+  char *num = strtok(args, " ");
+  char *baseaddr = strtok(NULL, " ");//NULL默认从上次分割结束处开始
+  addr = expr(baseaddr, &success);//表达式得到结果给addr
+  sscanf(num, "%d", &len);
+  //sscanf(baseaddr, "%x", &addr);
+  for(int i = 0 ; i < len ; i ++)
+    {
+	    printf("%x\n",paddr_read(addr,4));//读4个字节
+	    addr = addr + 4;
+    }	       
+    return 0;
+}
+
+static int cmd_p(char *args) {
+  bool success;
+  if(args == NULL){
+    printf("Please input the expression\n");
+    return 0;
+  }
+  else {
+    word_t result = expr(args, &success);
+    printf("The result of expr is %d\n", result);
+    //可以加入对expr正确与否的判断
+  }
+  return 0;
+}
+
+static int cmd_d(char *args) {
+  if(args == NULL){
+    printf("Please input the number of watchpoint\n");
+    return 0;
+  }
+  else {
+    delete_watchpoint(atoi(args));
+  }
+  return 0;
+}
+
+static int cmd_w(char *args) {
+  if(args == NULL){
+    printf("Please input the expression\n");
+    return 0;
+  }
+  else {
+    WP *p = new_wp();
+    bool success;
+    strcpy(p -> expr, args);
+    int result = expr(args,&success);
+    if(success) {
+    p -> old_value = result;
+    printf("Create watchpoint No.%d success.\n", p -> NO);
+    }
+    else {
+    printf("Create watchpoint failed.\n");
+    }
+  }
+  return 0;
+}
 
 static struct {
   const char *name;
@@ -62,6 +175,12 @@ static struct {
   { "help", "Display information about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
+  { "si", "Exeute one step", cmd_si},
+  { "info", "Print info. of registers or watchpoint", cmd_info},
+  { "x", "Scan the virtual memory", cmd_x},
+  {"p","Run expr", cmd_p},
+  {"d", "Delete watchpoint by NO", cmd_d},
+  {"w", "Rreate watchpoint with expr", cmd_w},
 
   /* TODO: Add more commands */
 
