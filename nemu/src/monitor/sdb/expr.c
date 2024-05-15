@@ -21,8 +21,19 @@
 #include <regex.h>
 
 enum {
-  TK_NOTYPE = 256, TK_EQ,
-
+  TK_NOTYPE = 256, //TK_EQ,
+  NUM = 1,
+  RESGISTER = 2,
+  HEX = 3,
+  EQ = 4,
+  NOTEQ = 5,
+  OR = 6,
+  AND = 7,
+  ZUO = 8,
+  YOU = 9,
+  LEQ = 10,
+  YINYONG = 11,
+  POINT, NEG
   /* TODO: Add more token types */
 
 };
@@ -37,8 +48,30 @@ static struct rule {
    */
 
   {" +", TK_NOTYPE},    // spaces
+  // {"\\+", '+'},         // plus
+  // {"==", TK_EQ},        // equal
   {"\\+", '+'},         // plus
-  {"==", TK_EQ},        // equal
+  {"\\-", '-'},         // sub
+  {"\\*", '*'},         // mul
+  {"\\/", '/'},         // div
+
+  {"\\(", ZUO},
+  {"\\)", YOU},
+  /*
+    * Inset the '(' and ')' on the [0-9] bottom case Bug.
+    */
+  {"\\<\\=", LEQ},		// TODO
+  {"\\=\\=", EQ},        // equal
+  {"\\!\\=", NOTEQ},
+
+  {"\\|\\|", OR},       // Opetor
+  {"\\&\\&", AND},
+  {"\\!", '!'},
+
+  //{"\\$[a-z]*", RESGISTER},
+  {"\\$[a-zA-Z]*[0-9]*", RESGISTER},
+  {"0[xX][0-9a-fA-F]+", HEX},
+  {"[0-9]*", NUM},
 };
 
 #define NR_REGEX ARRLEN(rules)
@@ -69,6 +102,7 @@ typedef struct token {
 
 static Token tokens[32] __attribute__((used)) = {};
 static int nr_token __attribute__((used))  = 0;
+int len = 0;
 
 static bool make_token(char *e) {
   int position = 0;
@@ -93,12 +127,85 @@ static bool make_token(char *e) {
          * to record the token in the array `tokens'. For certain types
          * of tokens, some extra actions should be performed.
          */
-
+        Token tmp_token;
         switch (rules[i].token_type) {
-          default: TODO();
-        }
+          case '+':
+            tmp_token.type = '+';
+            tokens[nr_token ++] = tmp_token;
+            break;
+          case '-':
+            tmp_token.type = '-';
+            tokens[nr_token ++] = tmp_token;
+            break;
+          case '*':
+            tmp_token.type = '*';
+            tokens[nr_token ++] = tmp_token;
+            break;
+          case '/':
+            tmp_token.type = '/';
+            tokens[nr_token ++] = tmp_token;
+            break;
+          case 256://不用给的，太麻烦
+            break;
+          case '!':
+            tmp_token.type = '!';
+            tokens[nr_token ++] = tmp_token;
+            break;
+          case 9:
+            tmp_token.type = ')';
+            tokens[nr_token ++] = tmp_token;
+            break;
+          case 8:
+            tmp_token.type = '(';
+            tokens[nr_token ++] = tmp_token;
+            break;
 
-        break;
+          // Special
+          case 1: // num
+            tokens[nr_token].type = 1;
+            strncpy(tokens[nr_token].str, &e[position - substr_len], substr_len);//把字符子串赋入str
+            nr_token ++;
+            break;
+          case 2: // regex
+            tokens[nr_token].type = 2;
+            strncpy(tokens[nr_token].str, &e[position - substr_len], substr_len);
+            nr_token ++;
+            break;
+          case 3: // HEX
+            tokens[nr_token].type = 3;
+            strncpy(tokens[nr_token].str, &e[position - substr_len], substr_len);
+            nr_token ++;
+            break;
+          case 4:
+            tokens[nr_token].type = 4;
+            strcpy(tokens[nr_token].str, "==");
+            nr_token++;
+            break;
+          case 5:
+            tokens[nr_token].type = 5;
+            strcpy(tokens[nr_token].str, "!=");
+            nr_token++;
+            break;
+          case 6:
+            tokens[nr_token].type = 6;
+            strcpy(tokens[nr_token].str, "||");
+            nr_token++;
+            break;
+          case 7:
+            tokens[nr_token].type = 7;
+            strcpy(tokens[nr_token].str, "&&");
+            nr_token++;
+            break;
+          case 10:
+            tokens[nr_token].type = 10;
+            strcpy(tokens[nr_token].str, "<=");
+            nr_token ++;
+            break;
+          default:
+            printf("i = %d and No rules is suitable.\n", i);
+            break;
+        }
+        len = substr_len;
       }
     }
 
