@@ -178,9 +178,9 @@ static struct {
   { "si", "Exeute one step", cmd_si},
   { "info", "Print info. of registers or watchpoint", cmd_info},
   { "x", "Scan the virtual memory", cmd_x},
-  {"p","Run expr", cmd_p},
-  {"d", "Delete watchpoint by NO", cmd_d},
-  {"w", "Rreate watchpoint with expr", cmd_w},
+  { "p", "Run expr", cmd_p},
+  { "d", "Delete watchpoint by NO", cmd_d},
+  { "w", "Rreate watchpoint with expr", cmd_w},
 
   /* TODO: Add more commands */
 
@@ -253,9 +253,42 @@ void sdb_mainloop() {
   }
 }
 
+// void test_expr() {
+//   FILE *fp = fopen("/home/wd/ysyx-workbench/nemu/tools/gen-expr/output", "r");
+//   if (fp == NULL) perror("test_expr error");
+
+//   char *e = NULL;
+//   word_t correct_res;
+//   size_t len = 0;
+//   size_t read;
+//   bool success = false;
+
+//   while (true) {
+//     if(fscanf(fp, "%lu ", &correct_res) == -1) break;
+//     read = getline(&e, &len, fp);
+//     e[read-1] = '\0';
+    
+//     word_t res = expr(e, &success);
+    
+//     assert(success);
+//     if (res != correct_res) {
+//       puts(e);
+//       printf("expected: %lu, got: %lu\n", correct_res, res);
+//       assert(0);
+//     }
+//   }
+
+//   fclose(fp);
+//   if (e) free(e);
+
+//   Log("expr test pass");
+// }
+
 void init_sdb() {
   /* Compile the regular expressions. */
   init_regex();
+
+  // test_expr();
 
   /* Initialize the watchpoint pool. */
   init_wp_pool();
