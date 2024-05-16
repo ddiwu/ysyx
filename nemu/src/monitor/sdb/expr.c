@@ -60,7 +60,7 @@ static struct rule {
   /*
     * Inset the '(' and ')' on the [0-9] bottom case Bug.
     */
-  {"\\<\\=", LEQ},		// TODO
+  {"\\<\\=", LEQ},		
   {"\\=\\=", EQ},        // equal
   {"\\!\\=", NOTEQ},
 
@@ -97,10 +97,10 @@ void init_regex() {
 
 typedef struct token {
   int type;
-  char str[32];
+  char str[100];
 } Token;
 
-static Token tokens[32] __attribute__((used)) = {};
+static Token tokens[100] __attribute__((used)) = {};
 static int nr_token __attribute__((used))  = 0;
 int len = 0;
 
@@ -256,23 +256,29 @@ int char2int(char s[]){
 bool check_parentheses(int p, int q)
 {
     if(tokens[p].type != '('  || tokens[q].type != ')')
-	return false;
+	  return false;
 
     int l = p , r = q;
     while(l < r)
     {
-		if(tokens[l].type == '('){
-			if(tokens[r].type == ')')
-			{
-				l ++ , r --;
-				continue;
-			} 
-			else 
-			r --;
-		}
-		else if(tokens[l].type == ')')
-			return false;
-		else l ++;
+      if(tokens[l].type == '('){
+        if(tokens[r].type == ')')
+        {
+          l ++ , r --;
+          continue;
+        } 
+        else{
+          r --;
+          if (l == r) return false;
+        }
+      }
+      // else if(tokens[l].type == ')')
+      //   return false;
+      else{
+        if(tokens[l].type == ')') return false;
+        l++;
+        if(tokens[l].type == ')') return false;//前后都要检测一遍
+      }
     }
     return true;
 }
@@ -284,7 +290,7 @@ int max(int a, int b) {
 uint32_t eval(int p, int q) {
     if (p > q) {
         /* Bad expression */
-        assert(0);
+        assert(0 && "Bad expression");
         return -1;
     }
     else if (p == q) {
@@ -301,20 +307,22 @@ uint32_t eval(int p, int q) {
         // printf("check p = %d, q = %d\n",p + 1 , q - 1);
         return eval(p + 1, q - 1);
     }
-    /* else if(check_parentheses(p, q) == false){
-       printf("Unique\n");
-       return -1;
-       }
-       */
+    // else if(check_parentheses(p, q) == false){
+    //   assert(0);
+    //   return -1;
+    // }
     else {
         int op = -1; // op = the position of 主运算符 in the token expression;
         bool flag = false;
         for(int i = p ; i <= q ; i ++)
         {
+          // printf("%d", i);
             if(tokens[i].type == '(')
             {
-                while(tokens[i].type != ')')
-                    i ++;
+                int j = i;
+                i++;
+                while(check_parentheses(j, i) == false)
+                  i++;
             }
             if(!flag && tokens[i].type == 6){
                 flag = true;
@@ -322,7 +330,7 @@ uint32_t eval(int p, int q) {
             }
 
             if(!flag && tokens[i].type == 7 ){
-				flag = true;
+				        flag = true;
                 op = max(op,i);
             }
 
@@ -347,14 +355,14 @@ uint32_t eval(int p, int q) {
                 op = max(op, i);
             }
         }
-        //      printf("op position is %d\n", op);
+        // printf("op position is %d\n", op);
         // if register return $register
         int  op_type = tokens[op].type;
 
         // 递归处理剩余的部分
         uint32_t  val1 = eval(p, op - 1);
         uint32_t  val2 = eval(op + 1, q);
-        //      printf("val1 = %d, val2 = %d \n", val1, val2);
+        //printf("val1 = %d, val2 = %d \n", val1, val2);
 
         switch (op_type) {
             case '+':
@@ -388,7 +396,7 @@ uint32_t eval(int p, int q) {
 word_t expr(char *e, bool *success)
 {
   if (!make_token(e)) {
-    printf("make_token False\n");
+    assert(0 && "make_token error");
     *success = false;
     return 0;
   }
@@ -400,7 +408,7 @@ word_t expr(char *e, bool *success)
      *  Get length
      */ 
     int tokens_len = 0;
-    for(int i = 0 ; i < 32 ; i ++)
+    for(int i = 0 ; i < 100 ; i ++)
     {
       if(tokens[i].type != 0)
       tokens_len ++;
@@ -444,7 +452,7 @@ word_t expr(char *e, bool *success)
      */
     for(int i = 0 ; i < tokens_len ; i ++)
     {
-      if((tokens[i].type == '-' && i > 0 && tokens[i-1].type != NUM && tokens[i+1].type == NUM)||(tokens[i].type == '-' && i == 0))
+      if((tokens[i].type == '-' && i > 0 && tokens[i-1].type != NUM && tokens[i-1].type != ')' && tokens[i+1].type == NUM)||(tokens[i].type == '-' && i == 0))
       {
         tokens[i].type = TK_NOTYPE;
         //tokens[i].str = tmp;
@@ -498,25 +506,25 @@ word_t expr(char *e, bool *success)
      */
     for(int i = 0 ; i < tokens_len ; i ++)
     {
-		if(	(tokens[i].type == '*' && i > 0 && tokens[i-1].type != NUM && tokens[i-1].type != HEX && tokens[i-1].type != RESGISTER && tokens[i+1].type == NUM )
-			|| (tokens[i].type == '*' && i > 0 && tokens[i-1].type != NUM && tokens[i-1].type != HEX && tokens[i-1].type != RESGISTER && tokens[i+1].type == HEX)
-			|| (tokens[i].type == '*' && i == 0))
-		{
-			tokens[i].type = TK_NOTYPE;
-			int tmp = char2int(tokens[i+1].str);
-			uintptr_t a = (uintptr_t)tmp;
-			int value = *((int*)a);
-			int2char(value, tokens[i+1].str);	    
-			for(int j = 0 ; j < tokens_len ; j ++){
-				if(tokens[j].type == TK_NOTYPE)
-				{
-					for(int k = j +1 ; k < tokens_len ; k ++){
-						tokens[k - 1] = tokens[k];
-					}
-					tokens_len -- ;
-				}
-			}
-		}
+      if(	(tokens[i].type == '*' && i > 0 && tokens[i-1].type != NUM && tokens[i-1].type != HEX && tokens[i-1].type != RESGISTER && tokens[i-1].type != ')' && tokens[i+1].type == NUM )
+        || (tokens[i].type == '*' && i > 0 && tokens[i-1].type != NUM && tokens[i-1].type != HEX && tokens[i-1].type != RESGISTER && tokens[i-1].type != ')' && tokens[i+1].type == HEX)
+        || (tokens[i].type == '*' && i == 0))
+      {
+        tokens[i].type = TK_NOTYPE;
+        int tmp = char2int(tokens[i+1].str);
+        uintptr_t a = (uintptr_t)tmp;
+        int value = *((int*)a);
+        int2char(value, tokens[i+1].str);	    
+        for(int j = 0 ; j < tokens_len ; j ++){
+          if(tokens[j].type == TK_NOTYPE)
+          {
+            for(int k = j +1 ; k < tokens_len ; k ++){
+              tokens[k - 1] = tokens[k];
+            }
+            tokens_len -- ;
+          }
+        }
+      }
     }
 
     /*
@@ -524,8 +532,9 @@ word_t expr(char *e, bool *success)
      * Data tokens (num, op_type)
      */ 
     uint32_t res = 0;
+    printf("tokens_len = %d\n", tokens_len);
     res = eval(0, tokens_len - 1);
-    //    printf("%d\n", tokens[i].t   printf("check flag = %d\n",check_parentheses(0, tokens_len - 1));
+    //printf("check flag = %d\n",check_parentheses(0, tokens_len - 1));
     //if(!division_zero)
 		//printf("uint32_t res = %d\n", res);
     if(division_zero)
