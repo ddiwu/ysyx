@@ -39,10 +39,22 @@ void sdb_watchpoint_display(){
 }
 
 void delete_watchpoint(int no){
-  for(int i = 0 ; i < NR_WP ; i ++)
-	if(wp_pool[i].NO == no){
+  for(int i = 0 ; i < NR_WP ; i ++){
+	//printf("wp_pool[%d].NO = %d\n", i, wp_pool[i].NO);
+  if(wp_pool[i].NO == no){
 	    free_wp(&wp_pool[i]);
 	}
+  }
+}
+
+void create_watchpoint(char* args){
+    WP* p =  new_wp();
+    strcpy(p -> expr, args);
+    bool success = false;
+    int tmp = expr(p -> expr,&success);
+   if(success) p -> old_value = tmp;
+   else printf("创建watchpoint的时候expr求值出现问题\n");
+    printf("Create watchpoint No.%d success.\n", p -> NO);
 }
 
 /* We use the `readline' library to provide more flexibility to read from stdin. */
@@ -104,19 +116,33 @@ static int cmd_info(char *args) {
   return 0;
 }
 
-static int cmd_x(char *args) {
-  int len;
-  paddr_t addr;
-  bool success;
-  char *num = strtok(args, " ");
-  char *baseaddr = strtok(NULL, " ");//NULL默认从上次分割结束处开始
-  addr = expr(baseaddr, &success);//表达式得到结果给addr
-  sscanf(num, "%d", &len);
-  //sscanf(baseaddr, "%x", &addr);
-  for(int i = 0 ; i < len ; i ++)
+// static int cmd_x(char *args) {
+//   int len;
+//   paddr_t addr;
+//   bool success;
+//   char *num = strtok(args, " ");
+//   char *baseaddr = strtok(NULL, " ");//NULL默认从上次分割结束处开始
+//   addr = expr(baseaddr, &success);//表达式得到结果给addr
+//   sscanf(num, "%d", &len);
+//   //sscanf(baseaddr, "%x", &addr);
+//   for(int i = 0 ; i < len ; i ++)
+//     {
+// 	    printf("%x\n",paddr_read(addr,4));//读4个字节
+// 	    addr = addr + 4;
+//     }	       
+//     return 0;
+// }
+static int cmd_x(char *args){
+    char* n = strtok(args," ");
+    char* baseaddr = strtok(NULL," ");
+    int len = 0;
+    paddr_t addr = 0;
+    sscanf(n, "%d", &len);
+    sscanf(baseaddr,"%x", &addr);
+    for(int i = 0 ; i < len ; i ++)
     {
-	    printf("%x\n",paddr_read(addr,4));//读4个字节
-	    addr = addr + 4;
+      printf("0x%8x\n",paddr_read(addr,4));//addr len
+      addr = addr + 4;
     }	       
     return 0;
 }
@@ -146,25 +172,29 @@ static int cmd_d(char *args) {
   return 0;
 }
 
-static int cmd_w(char *args) {
-  if(args == NULL){
-    printf("Please input the expression\n");
+// static int cmd_w(char *args) {
+//   if(args == NULL){
+//     printf("Please input the expression\n");
+//     return 0;
+//   }
+//   else {
+//     WP *p = new_wp();
+//     bool success;
+//     strcpy(p -> expr, args);
+//     int result = expr(args,&success);
+//     if(success) {
+//     p -> old_value = result;
+//     printf("Create watchpoint No.%d success.\n", p -> NO);
+//     }
+//     else {
+//     printf("Create watchpoint failed.\n");
+//     }
+//   }
+//   return 0;
+// }
+static int cmd_w(char* args){
+    create_watchpoint(args);
     return 0;
-  }
-  else {
-    WP *p = new_wp();
-    bool success;
-    strcpy(p -> expr, args);
-    int result = expr(args,&success);
-    if(success) {
-    p -> old_value = result;
-    printf("Create watchpoint No.%d success.\n", p -> NO);
-    }
-    else {
-    printf("Create watchpoint failed.\n");
-    }
-  }
-  return 0;
 }
 
 static struct {

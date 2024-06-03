@@ -290,7 +290,7 @@ int max(int a, int b) {
 uint32_t eval(int p, int q) {
     if (p > q) {
         /* Bad expression */
-        assert(0 && "Bad expression");
+        //assert(0 && "Bad expression");
         return -1;
     }
     else if (p == q) {
@@ -532,7 +532,7 @@ word_t expr(char *e, bool *success)
      * Data tokens (num, op_type)
      */ 
     uint32_t res = 0;
-    printf("tokens_len = %d\n", tokens_len);
+    //printf("tokens_len = %d\n", tokens_len);
     res = eval(0, tokens_len - 1);
     //printf("check flag = %d\n",check_parentheses(0, tokens_len - 1));
     //if(!division_zero)
