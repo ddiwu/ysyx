@@ -33,6 +33,7 @@ static uint64_t g_timer = 0; // unit: us
 static bool g_print_step = false;
 
 void device_update();
+void display_inst();
 
 static void trace_and_difftest(Decode *_this, vaddr_t dnpc) {
 #ifdef CONFIG_ITRACE_COND
@@ -46,6 +47,7 @@ static void trace_and_difftest(Decode *_this, vaddr_t dnpc) {
       {
           bool success = false;
           int tmp = expr(wp_pool[i].expr, &success);
+          //assert(0);
           if(success){
             if(tmp != wp_pool[i].old_value)
             {
@@ -114,6 +116,7 @@ static void statistic() {
 }
 
 void assert_fail_msg() {
+  display_inst();
   isa_reg_display();
   statistic();
 }

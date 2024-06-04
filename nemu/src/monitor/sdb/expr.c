@@ -20,6 +20,13 @@
  */
 #include <regex.h>
 
+const char *reg_name[] = {
+  "$0", "$ra", "$sp", "$gp", "$tp", "$t0", "$t1", "$t2",
+  "$s0", "$s1", "$a0", "$a1", "$a2", "$a3", "$a4", "$a5",
+  "$a6", "$a7", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7",
+  "$s8", "$s9", "$s10", "$s11", "$t3", "$t4", "$t5", "$t6"
+};
+
 enum {
   TK_NOTYPE = 256, //TK_EQ,
   NUM = 1,
@@ -113,17 +120,20 @@ static bool make_token(char *e) {
 
     while (e[position] != '\0') {
         /* Try all rules one by one. */
+        //printf("e[position] = %s\n", e);
         for (i = 0; i < NR_REGEX; i ++) {
             if (regexec(&re[i], e + position, 1, &pmatch, 0) == 0 && pmatch.rm_so == 0) {
                 //char *substr_start = e + position;
                 int substr_len = pmatch.rm_eo;
+                //printf("substr_len = %d\n", substr_len);
                 /*
                    Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s",
                    i, rules[i].regex, position, substr_len, substr_len, substr_start);
                    */
 
                 position += substr_len;
-
+                //printf("tokens_type = %d\n", rules[i].token_type);
+                
                 /* TODO: Now a new token is recognized with rules[i]. Add codes
                  * to record the token in the array `tokens'. For certain types
                  * of tokens, some extra actions should be performed.
@@ -169,7 +179,9 @@ static bool make_token(char *e) {
                         break;
                     case 2: // regex
                         tokens[nr_token].type = 2;
+                        //printf("%s",&e[position - substr_len]);
                         strncpy(tokens[nr_token].str, &e[position - substr_len], substr_len);
+                        //printf("%s",tokens[0].str);
                         nr_token ++;
                         break;
                     case 3: // HEX
@@ -298,6 +310,19 @@ uint32_t eval(int p, int q) {
          * For now this token should be a number.
          * Return the value of the number.
          */
+        if (tokens[p].type == 2){
+          // printf("%d",p);
+          // printf("%s", tokens[p].str);
+          //printf("%d", tokens[p].type);
+          // puts(tokens[p].str);
+          for (int i = 0; i < 32; i++){
+            //assert(0);
+            if (strcmp(tokens[p].str, reg_name[i]) == 0){
+              //assert(0);
+              return cpu.gpr[i];
+            }
+          }
+        }
         return atoi(tokens[p].str);
     }
     else if (check_parentheses(p, q) == true) {
@@ -418,21 +443,21 @@ word_t expr(char *e, bool *success)
     /*
      * Init the tokens regex
      */
-    for(int i = 0 ; i < tokens_len ; i ++)
-    {
-      if(tokens[i].type == 2)
-      {
-		bool flag = true;
-		int tmp = isa_reg_str2val(tokens[i].str, &flag);
-		if(flag){
-			int2char(tmp, tokens[i].str); // transfrom the str --> $egx
-		}
-		else{
-			printf("Transfrom error. \n");
-			assert(0);
-	    }
-      } 
-    }
+    // for(int i = 0 ; i < tokens_len ; i ++)
+    // {
+    //   if(tokens[i].type == 2)
+    //   {
+		// bool flag = true;
+		// int tmp = isa_reg_str2val(tokens[i].str, &flag);
+		// if(flag){
+		// 	int2char(tmp, tokens[i].str); // transfrom the str --> $egx
+		// }
+		// else{
+		// 	printf("Transfrom error. \n");
+		// 	assert(0);
+	  //   }
+    //   } 
+    // }
 
 
     /*
@@ -501,9 +526,6 @@ word_t expr(char *e, bool *success)
 			}
 		}
     }
-    /*
-     * Jie yin yong
-     */
     for(int i = 0 ; i < tokens_len ; i ++)
     {
       if(	(tokens[i].type == '*' && i > 0 && tokens[i-1].type != NUM && tokens[i-1].type != HEX && tokens[i-1].type != RESGISTER && tokens[i-1].type != ')' && tokens[i+1].type == NUM )
@@ -533,6 +555,7 @@ word_t expr(char *e, bool *success)
      */ 
     uint32_t res = 0;
     //printf("tokens_len = %d\n", tokens_len);
+    //printf("%s",tokens[0].str);
     res = eval(0, tokens_len - 1);
     //printf("check flag = %d\n",check_parentheses(0, tokens_len - 1));
     //if(!division_zero)
