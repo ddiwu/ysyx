@@ -19,6 +19,7 @@ void init_monitor(int, char *[]);
 void am_init_monitor();
 void engine_start();
 int is_exit_status_bad();
+void sdb_set_batch_mode();
 
 int main(int argc, char *argv[]) {
   /* Initialize the monitor. */
@@ -29,6 +30,7 @@ int main(int argc, char *argv[]) {
 #endif
 
   /* Start engine. */
+  //sdb_set_batch_mode(); //批处理模式
   engine_start();
 
   return is_exit_status_bad();
